@@ -1,3 +1,4 @@
+
 import sys
 import heapq
 
@@ -31,6 +32,20 @@ async def nice(userid: int, channel: discord.TextChannel):
     await embed_addusr(embed, userid, count, False)
     await channel.send(embed=embed)
 
+async def not_nice(userid: int, channel: discord.TextChannel):
+    user = db.get(Query().userid == userid)
+    if user: count = user['count']
+    else: count = 0
+    count -= 1
+    db.upsert({'userid': userid, 'count': count}, Query().userid == userid)
+
+    top = heapq.nlargest(3, db, lambda x: x['count'])
+
+    embed=discord.Embed(title='𝓷𝓲𝓬𝓮 ☜(ﾟヮﾟ☜)', description='Nice Leaderboard')
+    for t in top: await embed_addusr(embed, t['userid'], t['count'])
+    await embed_addusr(embed, userid, count, False)
+    await channel.send(embed=embed)
+
 
 @client.event
 async def on_ready():
@@ -42,6 +57,9 @@ async def on_message(msg: discord.Message):
     if not msg.author.bot and msg.content == 'nice':
         uid = msg.author.id
         await nice(uid, msg.channel)
+    if not msg.author.bot and msg.content == 'not nice':
+        uid = msg.author.id
+        await not_nice(uid, msg.channel)
 
 
 client.run(token)
